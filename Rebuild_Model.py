@@ -54,7 +54,7 @@ class Rebuild_Model(object):
         else:
             self.model_ = self.train(self.mat_interaction,self.mat_user_feature,self.mat_item_feature)
 
-        print(self.calculate_auc_score(self.model_,self.mat_interaction,self.mat_item_feature,self.mat_user_feature))
+        #print(self.calculate_auc_score(self.model_,self.mat_interaction,self.mat_item_feature,self.mat_user_feature))
         
         #saving
         self.save_model()
@@ -124,6 +124,10 @@ class Rebuild_Model(object):
             user_features=user_features, 
             num_threads=4).mean()
         return score
+
+    def get_model_perfomance(self):
+        return (self.calculate_auc_score(self.model_,self.mat_interaction,self.mat_item_feature,self.mat_user_feature))
+
 
     def train(self,mat_interaction,mat_user_feature,mat_item_feature,epoch=20,threads=8):
         model = LightFM(loss=self.loss,learning_rate=self.learning_rate,item_alpha=self.item_alpha,user_alpha=self.user_alpha)
