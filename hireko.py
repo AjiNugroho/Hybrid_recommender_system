@@ -68,24 +68,24 @@ class Hireko(object):
 
     
     
-    def predict(self,user,feature):
+    def predict(self,user,feature,num=5):
         
         recommended_item = []
         recommended_new_item = []
         #warm user
         if user in self.list_user:
-            recommended_item = self.hireko_user(user)
+            recommended_item = self.hireko_user(user,num)
             if self.matrix_new_item_path:
-                recommended_new_item = self.hireko_new_item(user)
+                recommended_new_item = self.hireko_new_item(user,num)
             
         #cold user
         else:
-            recommended_item = self.hireko_new_user(feature)
+            recommended_item = self.hireko_new_user(feature,num)
 
         return recommended_item,recommended_new_item
 
 
-    def hireko_user(self,user):
+    def hireko_user(self,user,num):
         '''memberikan rekomendasi user existing ke item existing'''
 
         if not isinstance(user,str):
@@ -104,11 +104,11 @@ class Hireko(object):
                 item_features=self.matrix_item_feature,
                 user_features=self.matrix_user_feature)
 
-        top_item = list_item_unwatched[[np.argsort(-scores)]][:5]
-        top_score= scores[np.argsort(-scores)][:5]
+        top_item = list_item_unwatched[[np.argsort(-scores)]][:num]
+        top_score= scores[np.argsort(-scores)][:num]
         
         top_item_score = []
-        for x in range(5):
+        for x in range(num):
             rekomendasi = {
                 'item_id':top_item[x],
                 'score':top_score[x]
@@ -118,7 +118,7 @@ class Hireko(object):
         
         return top_item_score
 
-    def hireko_new_user(self,feature_user):
+    def hireko_new_user(self,feature_user,num):
         '''rekomendasi user baru (cold_user)'''
 
         if not isinstance(feature_user,str):
@@ -141,7 +141,7 @@ class Hireko(object):
         top_score= scores[np.argsort(-scores)][:5]
         
         top_item_score = []
-        for x in range(5):
+        for x in range(num):
             rekomendasi = {
                 'item_id':top_item[x],
                 'score':top_score[x]
@@ -160,7 +160,7 @@ class Hireko(object):
         sparse = sp.csc_matrix(matx)
         return sparse
     
-    def hireko_new_item(self,user):
+    def hireko_new_item(self,user,num):
         '''memberikan rekomendasi user existing ke new item'''
 
         #cek user existing
@@ -177,11 +177,11 @@ class Hireko(object):
                 item_features=self.matrix_new_item,
                 user_features=self.matrix_user_feature)
 
-        top_item = list_new_item[[np.argsort(-scores)]][:5]
-        top_score= scores[np.argsort(-scores)][:5]
+        top_item = list_new_item[[np.argsort(-scores)]][:num]
+        top_score= scores[np.argsort(-scores)][:num]
         
         top_item_score = []
-        for x in range(len(itemindex)):
+        for x in range(len(top_item)):
             rekomendasi = {
                 'item_id':top_item[x],
                 'score':top_score[x]
