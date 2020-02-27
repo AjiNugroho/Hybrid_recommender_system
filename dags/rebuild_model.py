@@ -2,7 +2,7 @@ from datetime import datetime
 from airflow.models import DAG
 from airflow.operators.bash_operator import BashOperator
 
-args = {"owner": "airflow", "start_date": datetime(2020, 2, 27)}
+args = {"owner": "airflow", "start_date": datetime(2020, 2, 26)}
 
 dag = DAG(dag_id="rebuild-model", default_args=args, schedule_interval="@daily")
 
