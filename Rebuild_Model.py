@@ -10,7 +10,7 @@ from pyspark.sql.functions import col, collect_list, lit, sum, coalesce, count, 
 from lightfm import cross_validation
 import scipy.sparse as sp
 import dill
-spark = SparkSession.builder.master("local[*]").appName("LightFM_Rebuild_Model").getOrCreate()
+spark = SparkSession.builder.master("spark://159.69.109.173:7077").appName("LightFM_Rebuild_Model").getOrCreate()
 
 class Rebuild_Model(object):
     '''
