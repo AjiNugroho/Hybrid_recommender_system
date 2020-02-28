@@ -166,7 +166,7 @@ class Rebuild_Model(object):
                 dill.dump(self.mat_user_feature,f)
             f.close()
     
-    def save_mapping(self,path_save='dill/mapping'):
+    def save_mapping(self,path_save='/home/sbgs-workspace1/recsys/dill/mapping'):
         if path_save is not None:
             with open(path_save,'wb') as f:
                 dill.dump(self.user_to_index,f)
