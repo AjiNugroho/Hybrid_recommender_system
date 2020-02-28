@@ -188,14 +188,14 @@ def item_feature_preprocessing(spark: SparkSession, new_items=[], save_path="ite
 
 
 def get_existing_users(spark: SparkSession, parquet_dir):
-    interactions = load_parquet(spark, parquet_dir + "interactions")
+    interactions = load_parquet(spark, parquet_dir + "parquet/interactions")
     user_existing = interactions.select(col("user_id")).distinct()
     user_existing = user_existing.repartition(1)
     user_existing.write.mode("overwrite").csv(parquet_dir + "user_existing", header=True)
 
 
 def get_existing_items(spark: SparkSession, parquet_dir):
-    interactions = load_parquet(spark, parquet_dir + "interactions")
+    interactions = load_parquet(spark, parquet_dir + "parquet/interactions")
     item_existing = interactions.select(col("item_id")).distinct()
     item_existing = item_existing.repartition(1)
     item_existing.write.mode("overwrite").csv(parquet_dir + "item_existing", header=True)
