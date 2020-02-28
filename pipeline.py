@@ -7,7 +7,7 @@ HDFS_DIR = "hdfs://159.69.109.173:9000/user/sbgs-workspace1/recsys/"
 
 def check_new_item():
     spark = etl.create_spark_session(spark_master="spark://159.69.109.173:7077", app_name="check_new_item")
-    spark.sparkContext.addPyFile("lib.zip")
+#    spark.sparkContext.addPyFile("lib.zip")
     interaction_weekly = etl.load_parquet(spark, HDFS_DIR + "parquet-daily/interactions")
     interaction_daily = etl.load_parquet(spark, HDFS_DIR + "parquet-hourly/interactions")
     weekly_items = set([x["item_id"] for x in interaction_weekly.select("item_id").distinct().collect()])
@@ -22,7 +22,7 @@ def check_new_item():
 
 def pipeline(task, **kwargs):
     spark = etl.create_spark_session(spark_master="spark://159.69.109.173:7077", app_name=task)
-    spark.sparkContext.addPyFile("lib.zip")
+#    spark.sparkContext.addPyFile("lib.zip")
     if task == "hourly-etl":
         etl.user_preprocessing(spark, HDFS_DIR + "parquet-hourly/users")
         etl.item_preprocessing(spark, HDFS_DIR + "parquet-hourly/items")
@@ -39,13 +39,13 @@ def pipeline(task, **kwargs):
 
     if task == "update-model":
         if check_new_item():
-            rebuild = Rebuild_Model(online=True, new_item_exist=True)
+            rebuild = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet-hourly/", online=True, new_item_exist=True)
         else:
-            rebuild = Rebuild_Model(online=True)
+            rebuild = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet-hourly/", online=True)
         rebuild.get_model_perfomance()
 
     if task == "rebuild-model":
-        rebuild = Rebuild_Model(online=False)
+        rebuild = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet-daily/", online=False)
         rebuild.get_model_perfomance()
 
 

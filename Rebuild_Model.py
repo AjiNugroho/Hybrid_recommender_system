@@ -10,7 +10,6 @@ from pyspark.sql.functions import col, collect_list, lit, sum, coalesce, count, 
 from lightfm import cross_validation
 import scipy.sparse as sp
 import dill
-spark = SparkSession.builder.master("spark://159.69.109.173:7077").appName("LightFM_Rebuild_Model").getOrCreate()
 
 class Rebuild_Model(object):
     '''
@@ -18,7 +17,7 @@ class Rebuild_Model(object):
     semua user baru dan item baru akan di tambahkan dan akan di training ulang
     kelas ini juga berfungsi untuk membangun model pada proses awal training
     '''
-    def __init__(self,learning_schedule='adagrad',loss='warp',learning_rate=0.05,
+    def __init__(self, spark_session, parquet_dir, learning_schedule='adagrad',loss='warp',learning_rate=0.05,
                 item_alpha=0.0,user_alpha=0.0,online = False,new_item_exist= False):
         
         assert item_alpha >= 0.0
@@ -26,6 +25,8 @@ class Rebuild_Model(object):
         assert learning_schedule in ('adagrad', 'adadelta')
         assert loss in ('logistic', 'warp', 'bpr', 'warp-kos')
         
+        self.spark = spark_session
+        self.parquet_dir = parquet_dir
         self.item_alpha = item_alpha
         self.user_alpha = user_alpha
         self.learning_schedule = learning_schedule
@@ -66,11 +67,11 @@ class Rebuild_Model(object):
 
 
     def load_file(self):
-        df_item = spark.read.csv("item.csv", header=True)
-        df_user = spark.read.csv("users.csv", header=True)
-        df_interaction = spark.read.csv("user_item_interaction.csv", header=True)
-        df_user_feature= spark.read.csv('user_feature.csv', header=True)
-        df_item_feature= spark.read.csv('item_feature.csv', header=True)
+        df_item = self.spark.read.csv(self.parquet_dir + "items", header=True)
+        df_user = self.spark.read.csv(self.parquet_dir + "users", header=True)
+        df_interaction = self.spark.read.csv(self.parquet_dir + "interactions", header=True)
+        df_user_feature= self.spark.read.csv(self.parquet_dir + 'user_features', header=True)
+        df_item_feature= self.spark.read.csv(self.parquet_dir + 'item_features', header=True)
 
         #cleansing data
         df_user = df_user.fillna({'category_subscribe':'No_Categories','subscribe':'No_Subscribe'})
@@ -178,8 +179,8 @@ class Rebuild_Model(object):
                 dill.dump(self.index_to_ifeat,f)
             f.close()
             
-    def save_new_matrix(self,path_save = 'new_matrix_item'):
-        feature_item_new = spark.read.csv("item_feature_new.csv", header=True)
+    def save_new_matrix(self, path_save='new_matrix_item'):
+        feature_item_new = self.spark.read.csv(self.parquet_dir + "new_item_features", header=True)
         new_item_list = np.array(np.unique(feature_item_new.select("item_id").collect()))
         itm_to_idx,idx_to_itm = self.mapping_index(new_item_list)
 
@@ -189,12 +190,12 @@ class Rebuild_Model(object):
         Y = len(self.item_list_feature)
         matx = np.zeros((X,Y))
 
-        rowb=set(row)
-        rowb=list(rowb)
-        for a , b in zip (row,col):
-            matx[a][b]=1
+        rowb = set(row)
+        rowb = list(rowb)
+        for a, b in zip (row,col):
+            matx[a][b] = 1
             
-        mat_item_feature_new=sp.csc_matrix(matx)
+        mat_item_feature_new = sp.csc_matrix(matx)
 
         if path_save is not None:
             with open(path_save,'wb') as f:
