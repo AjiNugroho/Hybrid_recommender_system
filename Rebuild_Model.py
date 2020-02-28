@@ -182,6 +182,7 @@ class Rebuild_Model(object):
             
     def save_new_matrix(self, path_save="new_matrix_item"):
         feature_item_new = self.spark.read.parquet(self.parquet_dir + "new-item-features")
+        feature_item_new = feature_item_new.withColumn("feature", regexp_replace("genre_name", r",", r""))
         new_item_list = np.array(np.unique(feature_item_new.select("item_id").collect()))
         itm_to_idx,idx_to_itm = self.mapping_index(new_item_list)
 
