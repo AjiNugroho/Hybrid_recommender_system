@@ -49,6 +49,8 @@ def pipeline(task, subtask):
             if new_items:
                 etl.item_feature_preprocessing(spark, new_items=new_items,
                                                save_path=HDFS_DIR + "parquet/new-item-features")
+        elif subtask == "update_item_existing":
+            etl.get_existing_items(spark, parquet_dir=HDFS_DIR)
 
     if task == "daily-etl":
         if subtask == "users":
