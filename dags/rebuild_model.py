@@ -9,7 +9,6 @@ dag = DAG(dag_id="rebuild-model", default_args=args, schedule_interval="@daily")
 cmd_etl = (
     "spark-submit "
     "--master spark://159.69.109.173:7077 "
-    "--py-files /home/sbgs-workspace1/recsys/lib.zip "
     "/home/sbgs-workspace1/recsys/pipeline.py "
     "--task daily-etl"
 )
@@ -17,13 +16,12 @@ cmd_etl = (
 cmd_rebuild_model = (
     "spark-submit "
     "--master spark://159.69.109.173:7077 "
-    "--py-files /home/sbgs-workspace1/recsys/lib.zip "
     "/home/sbgs-workspace1/recsys/pipeline.py "
     "--task rebuild-model"
 )
 
 cmd_upload_dill = (
-    "hdfs fs"
+    "hdfs dfs"
     "-put /home/sbgs-workspace1/recsys/dill/* "
     "/user/sbgs-workspace1/recsys/dill/"
 )
@@ -40,10 +38,10 @@ rebuild_model = BashOperator(
     dag=dag
 )
 
-# upload_dill = BashOperator(
-#     task_id='upload-dill',
-#     bash_command=cmd_upload_dill,
-#     dag=dag
-# )
+upload_dill = BashOperator(
+    task_id='save-dill-to-hdfs',
+    bash_command=cmd_upload_dill,
+    dag=dag
+)
 
-etl >> rebuild_model
+etl >> rebuild_model >> upload_dill
