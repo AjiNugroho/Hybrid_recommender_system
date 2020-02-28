@@ -150,14 +150,14 @@ class Rebuild_Model(object):
 
         return model
     
-    def save_model(self,path_save = 'model'):
+    def save_model(self,path_save = 'dill/model'):
 
         if path_save is not None:
             with open(path_save,'wb') as f:
                 dill.dump(self.model_,f)
             f.close()
 
-    def save_matrix(self,path_save = 'matrix'):
+    def save_matrix(self,path_save = 'dill/matrix'):
 
         if path_save is not None:
             with open(path_save,'wb') as f:
@@ -166,7 +166,7 @@ class Rebuild_Model(object):
                 dill.dump(self.mat_user_feature,f)
             f.close()
     
-    def save_mapping(self,path_save='mapping'):
+    def save_mapping(self,path_save='dill/mapping'):
         if path_save is not None:
             with open(path_save,'wb') as f:
                 dill.dump(self.user_to_index,f)
@@ -179,7 +179,7 @@ class Rebuild_Model(object):
                 dill.dump(self.index_to_ifeat,f)
             f.close()
             
-    def save_new_matrix(self, path_save='new_matrix_item'):
+    def save_new_matrix(self, path_save='dill/new_matrix_item'):
         feature_item_new = self.spark.read.csv(self.parquet_dir + "new-item-features", header=True)
         new_item_list = np.array(np.unique(feature_item_new.select("item_id").collect()))
         itm_to_idx,idx_to_itm = self.mapping_index(new_item_list)
