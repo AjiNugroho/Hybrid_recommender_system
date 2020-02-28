@@ -36,7 +36,7 @@ def pipeline(task, subtask):
             etl.item_preprocessing(spark, save_path=HDFS_DIR + "parquet/items")
         elif subtask == "interactions":
             user_existing = spark.read.csv(HDFS_DIR + "user_existing", header=True)
-            existing_users = set([x["item_id"] for x in user_existing.select("item_id").collect()])
+            existing_users = set([x["user_id"] for x in user_existing.select("user_id").collect()])
             etl.interaction_preprocessing(spark, user_existing=existing_users,
                                           save_path=HDFS_DIR + "parquet/interactions")
         elif subtask == "user_features":
