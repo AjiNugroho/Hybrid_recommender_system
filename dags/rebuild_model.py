@@ -21,7 +21,7 @@ cmd_rebuild_model = (
 )
 
 cmd_upload_dill = (
-    "hdfs dfs"
+    "hdfs dfs "
     "-put /home/sbgs-workspace1/recsys/dill/* "
     "/user/sbgs-workspace1/recsys/dill/"
 )
