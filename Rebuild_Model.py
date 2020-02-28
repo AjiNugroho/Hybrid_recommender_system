@@ -17,7 +17,7 @@ class Rebuild_Model(object):
     semua user baru dan item baru akan di tambahkan dan akan di training ulang
     kelas ini juga berfungsi untuk membangun model pada proses awal training
     '''
-    def __init__(self, spark_session, parquet_dir, learning_schedule='adagrad',loss='warp',learning_rate=0.05,
+    def __init__(self, spark_session, parquet_dir, local_dill_path, learning_schedule='adagrad',loss='warp',learning_rate=0.05,
                 item_alpha=0.0,user_alpha=0.0,online = False,new_item_exist= False):
         
         assert item_alpha >= 0.0
@@ -27,6 +27,7 @@ class Rebuild_Model(object):
         
         self.spark = spark_session
         self.parquet_dir = parquet_dir
+        self.local_dill_path = local_dill_path
         self.item_alpha = item_alpha
         self.user_alpha = user_alpha
         self.learning_schedule = learning_schedule
@@ -58,12 +59,12 @@ class Rebuild_Model(object):
         #print(self.calculate_auc_score(self.model_,self.mat_interaction,self.mat_item_feature,self.mat_user_feature))
         
         #saving
-        self.save_model()
-        self.save_matrix()
-        self.save_mapping()
+        self.save_model(path_save=self.local_dill_path + "model")
+        self.save_matrix(path_save=self.local_dill_path + "matrix")
+        self.save_mapping(path_save=self.local_dill_path + "mapping")
         
         if new_item_exist:
-            self.save_new_matrix()
+            self.save_new_matrix(path_save=self.local_dill_path + "new_matrix_item")
 
 
     def load_file(self):
@@ -150,14 +151,14 @@ class Rebuild_Model(object):
 
         return model
     
-    def save_model(self,path_save = '/home/sbgs-workspace1/recsys/dill/model'):
+    def save_model(self,path_save = 'model'):
 
         if path_save is not None:
             with open(path_save,'wb') as f:
                 dill.dump(self.model_,f)
             f.close()
 
-    def save_matrix(self,path_save = '/home/sbgs-workspace1/recsys/dill/matrix'):
+    def save_matrix(self,path_save = 'matrix'):
 
         if path_save is not None:
             with open(path_save,'wb') as f:
@@ -166,7 +167,7 @@ class Rebuild_Model(object):
                 dill.dump(self.mat_user_feature,f)
             f.close()
     
-    def save_mapping(self,path_save='/home/sbgs-workspace1/recsys/dill/mapping'):
+    def save_mapping(self,path_save='mapping'):
         if path_save is not None:
             with open(path_save,'wb') as f:
                 dill.dump(self.user_to_index,f)
@@ -179,7 +180,7 @@ class Rebuild_Model(object):
                 dill.dump(self.index_to_ifeat,f)
             f.close()
             
-    def save_new_matrix(self, path_save='/home/sbgs-workspace1/recsys/dill/new_matrix_item'):
+    def save_new_matrix(self, path_save="new_matrix_item"):
         feature_item_new = self.spark.read.parquet(self.parquet_dir + "new-item-features")
         new_item_list = np.array(np.unique(feature_item_new.select("item_id").collect()))
         itm_to_idx,idx_to_itm = self.mapping_index(new_item_list)

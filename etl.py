@@ -101,7 +101,7 @@ def item_preprocessing(spark: SparkSession, save_path="items"):
     save_parquet(items, save_path)
 
 
-def interaction_preprocessing(spark: SparkSession, save_path="interactions"):
+def interaction_preprocessing(spark: SparkSession, user_existing = [], save_path="interactions"):
     """
     This method will generate interaction between user and item from user activity.
     Generated dataframe will contains user_id, item_id, rate columns.
@@ -129,38 +129,8 @@ def interaction_preprocessing(spark: SparkSession, save_path="interactions"):
     questioner = questioner.withColumn("action_type", lit("questioner")).withColumn("rate", lit(1))
     questioner = questioner.withColumnRenamed("arena_id", "channel_id")
     interactions = action_log.union(questioner)
-    interactions = interactions.groupBy("user_id", "channel_id").agg(sum("rate").alias("rate"))
-    interactions = interactions.withColumnRenamed("channel_id", "item_id")
-    save_parquet(interactions, save_path)
-
-def new_interaction_preprocessing(spark: SparkSession, save_path="interactions"):
-    """
-    This method will generate interaction between user and item from user activity.
-    Generated dataframe will contains user_id, item_id, rate columns.
-    Rate value is a rank between 1 - 5 with this criteria :
-        - User viewing stage : 1
-        - User post expression : 1
-        - User polling : 1
-        - User create post in audience : 1
-        - User filling questioner : 1
-    :param spark: spark Session
-    """
-    action_log = load_mysql(spark, "action_log")
-    arena_questioner = load_mysql(spark, "arena_questioner")
-    questioner_user_participations = load_mysql(spark, "questioner_user_participations")
-    action_types = ['view_stage', 'expression', 'polling', 'create_post_audience']
-    action_log = action_log.select("user_id", "channel_id", "action_type").where(col("action_type").isin(action_types))
-    action_log = action_log.where(~col("user_id").isNull()).withColumn("rate", lit(1))
-    action_log = action_log.drop_duplicates()
-    arena_questioner = arena_questioner.select("id", "arena_id").where(col("post_id") != 0)
-    questioner_user_participations = questioner_user_participations.select("questioner_id", "user_id")
-    questioner = arena_questioner.alias("a").join(questioner_user_participations.alias("b"),
-                                                  on=col("a.id") == col("b.questioner_id"), how="inner")\
-        .select("b.user_id", "a.arena_id")
-    questioner = questioner.drop_duplicates()
-    questioner = questioner.withColumn("action_type", lit("questioner")).withColumn("rate", lit(1))
-    questioner = questioner.withColumnRenamed("arena_id", "channel_id")
-    interactions = action_log.union(questioner)
+    if user_existing:
+        interactions = interactions.where(col("user_id").isin(user_existing))
     interactions = interactions.groupBy("user_id", "channel_id").agg(sum("rate").alias("rate"))
     interactions = interactions.withColumnRenamed("channel_id", "item_id")
     save_parquet(interactions, save_path)
@@ -192,7 +162,7 @@ def user_feature_preprocessing(spark: SparkSession, save_path="user_features"):
     save_parquet(user_feature, save_path)
 
 
-def item_feature_preprocessing(spark: SparkSession, save_path="item_features"):
+def item_feature_preprocessing(spark: SparkSession, new_items=[], save_path="item_features"):
     """
     This method will generate every feature from the item.
     Generated dataframe will contains item_id, features and weight column
@@ -202,6 +172,8 @@ def item_feature_preprocessing(spark: SparkSession, save_path="item_features"):
     arena_data = load_mysql(spark, "arena_data")
     arena_categories = load_mysql(spark, "arena_categories")
     arena_genres = load_mysql(spark, "arena_genres")
+    if new_items:
+        arena_data = arena_data.where(col("id").isin(new_items))
     item_category = arena_data.alias("a").join(arena_categories.alias("b"), on=col('a.cat_id') == col("b.id"), how="left")\
         .select("a.id", "b.cat_name")
     item_category = item_category.withColumnRenamed("id", "item_id").withColumnRenamed("cat_name", "feature")
@@ -215,27 +187,15 @@ def item_feature_preprocessing(spark: SparkSession, save_path="item_features"):
     save_parquet(item_feature, save_path)
 
 
-def new_item_feature_preprocessing(spark: SparkSession, new_item_list=[], save_path="new_item_features"):
-    """
-    This method will generate every feature from the new item.
-    Generated dataframe will contains item_id, features and weight column
-    Each feature will have value 1 on weight
-    :param spark: spark Session
-    """
-    arena_data = load_mysql(spark, "arena_data")
-    arena_categories = load_mysql(spark, "arena_categories")
-    arena_genres = load_mysql(spark, "arena_genres")
-    arena_data = arena_data.where(col("id").isin(new_item_list))
-    item_category = arena_data.alias("a").join(arena_categories.alias("b"), on=col('a.cat_id') == col("b.id"),
-                                               how="left") \
-        .select("a.id", "b.cat_name")
-    item_category = item_category.withColumnRenamed("id", "item_id").withColumnRenamed("cat_name", "feature")
-    item_genres = arena_data.alias("a").join(
-        arena_genres.alias("b"), on=col("a.genre_id") == col("b.id")).select(
-        "a.id", "b.genre_name")
-    item_genres = item_genres.withColumnRenamed("id", "item_id").withColumnRenamed("genre_name", "feature")
-    item_eo = arena_data.select("id", "eo_id").withColumnRenamed("id", "item_id").withColumnRenamed("eo_id",
-                                                                                                    "feature")
-    item_feature = item_category.union(item_genres).union(item_eo)
-    item_feature = item_feature.withColumn("weight", lit(1)).orderBy("item_id")
-    save_parquet(item_feature, save_path)
+def get_existing_users(spark: SparkSession, parquet_dir):
+    interactions = load_parquet(spark, parquet_dir + "interactions")
+    user_existing = interactions.select(col("user_id")).distinct()
+    user_existing = user_existing.repartition(1)
+    user_existing.write.mode("overwrite").csv(parquet_dir + "user_existing", header=True)
+
+
+def get_existing_items(spark: SparkSession, parquet_dir):
+    interactions = load_parquet(spark, parquet_dir + "interactions")
+    item_existing = interactions.select(col("item_id")).distinct()
+    item_existing = item_existing.repartition(1)
+    item_existing.write.mode("overwrite").csv(parquet_dir + "item_existing", header=True)

@@ -2,51 +2,66 @@ from Rebuild_Model import Rebuild_Model
 import etl
 import argparse
 
+SPARK_MASTER = "spark://159.69.109.173:7077"
 HDFS_DIR = "hdfs://159.69.109.173:9000/user/sbgs-workspace1/recsys/"
+LOCAL_DILL = "/home/sbgs-workspace1/recsys/dill"
+
+
+def get_new_item():
+    spark = etl.create_spark_session(spark_master= SPARK_MASTER, app_name="get_new_item")
+    interactions = etl.load_parquet(spark, HDFS_DIR + "parquet/interactions")
+    item_existing = spark.read.csv(HDFS_DIR + "item_existing", header=True)
+    interactions_items = set([x["item_id"] for x in interactions.select("item_id").distinct().collect()])
+    existing_items = set([x["item_id"] for x in item_existing.select("item_id").collect()])
+    new_items = list(interactions_items.difference(existing_items))
+    return new_items
 
 
 def check_new_item():
-    spark = etl.create_spark_session(spark_master="spark://159.69.109.173:7077", app_name="check_new_item")
-#    spark.sparkContext.addPyFile("lib.zip")
-    interaction_weekly = etl.load_parquet(spark, HDFS_DIR + "parquet-daily/interactions")
-    interaction_daily = etl.load_parquet(spark, HDFS_DIR + "parquet-hourly/interactions")
-    weekly_items = set([x["item_id"] for x in interaction_weekly.select("item_id").distinct().collect()])
-    daily_items = set([x["item_id"] for x in interaction_daily.select("item_id").distinct().collect()])
-    new_items = list(daily_items.difference(weekly_items))
-    if len(new_items) > 0:
-        etl.new_item_feature_preprocessing(spark, new_items, HDFS_DIR + "parquet-hourly/new-item-features")
+    spark = etl.create_spark_session(spark_master= SPARK_MASTER, app_name="check_new_item")
+    new_items = etl.load_parquet(spark, HDFS_DIR + "parquet/new-item-features")
+    if new_items:
         return True
     else:
         return False
 
 
 def pipeline(task):
-    spark = etl.create_spark_session(spark_master="spark://159.69.109.173:7077", app_name=task)
+    spark = etl.create_spark_session(spark_master=SPARK_MASTER, app_name=task)
 #    spark.sparkContext.addPyFile("lib.zip")
     if task == "hourly-etl":
-        etl.user_preprocessing(spark, HDFS_DIR + "parquet-hourly/users")
-        etl.item_preprocessing(spark, HDFS_DIR + "parquet-hourly/items")
-        etl.interaction_preprocessing(spark, HDFS_DIR + "parquet-hourly/interactions")
-        etl.user_feature_preprocessing(spark, HDFS_DIR + "parquet-hourly/user-features")
-        etl.item_feature_preprocessing(spark, HDFS_DIR + "parquet-hourly/item-features")
+        etl.user_preprocessing(spark, save_path=HDFS_DIR + "parquet/users")
+        etl.item_preprocessing(spark, save_path=HDFS_DIR + "parquet/items")
+        user_existing = spark.read.csv(HDFS_DIR + "user_existing", header=True)
+        existing_users = set([x["item_id"] for x in user_existing.select("item_id").collect()])
+        etl.interaction_preprocessing(spark, user_existing=existing_users, save_path=HDFS_DIR + "parquet/interactions")
+        etl.user_feature_preprocessing(spark, save_path=HDFS_DIR + "parquet/user-features")
+        etl.item_feature_preprocessing(spark, save_path=HDFS_DIR + "parquet/item-features")
+        etl.get_existing_items(spark, parquet_dir=HDFS_DIR)
+        new_items = get_new_item()
+        if new_items:
+            etl.item_feature_preprocessing(spark, new_items=new_items, save_path=HDFS_DIR + "parquet/new-item-features")
 
     if task == "daily-etl":
-        etl.user_preprocessing(spark, HDFS_DIR + "parquet-daily/users")
-        etl.item_preprocessing(spark, HDFS_DIR + "parquet-daily/items")
-        etl.interaction_preprocessing(spark, HDFS_DIR + "parquet-daily/interactions")
-        etl.user_feature_preprocessing(spark, HDFS_DIR + "parquet-daily/user-features")
-        etl.item_feature_preprocessing(spark, HDFS_DIR + "parquet-daily/item-features")
+        etl.user_preprocessing(spark, save_path=HDFS_DIR + "parquet/users")
+        etl.item_preprocessing(spark, save_path=HDFS_DIR + "parquet/items")
+        etl.interaction_preprocessing(spark, save_path=HDFS_DIR + "parquet/interactions")
+        etl.user_feature_preprocessing(spark, save_path=HDFS_DIR + "parquet/user-features")
+        etl.item_feature_preprocessing(spark, save_path=HDFS_DIR + "parquet/item-features")
+        etl.get_existing_users(spark, parquet_dir=HDFS_DIR)
+        etl.get_existing_items(spark, parquet_dir=HDFS_DIR)
 
     if task == "update-model":
         if check_new_item():
-            rebuild = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet-hourly/", online=True, new_item_exist=True)
+            Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet/", local_dill_path=LOCAL_DILL,
+                                    online=True, new_item_exist=True)
         else:
-            rebuild = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet-hourly/", online=True)
-        rebuild.get_model_perfomance()
+            Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet/", local_dill_path=LOCAL_DILL,
+                                    online=True)
 
     if task == "rebuild-model":
-        rebuild = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet-daily/", online=False)
-        rebuild.get_model_perfomance()
+        Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet/", local_dill_path=LOCAL_DILL,
+                                online=False)
 
 
 if __name__ == "__main__":
