@@ -20,7 +20,7 @@ def check_new_item():
         return False
 
 
-def pipeline(task, **kwargs):
+def pipeline(task):
     spark = etl.create_spark_session(spark_master="spark://159.69.109.173:7077", app_name=task)
 #    spark.sparkContext.addPyFile("lib.zip")
     if task == "hourly-etl":
