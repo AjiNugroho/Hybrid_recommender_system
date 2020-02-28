@@ -14,7 +14,7 @@ def check_new_item():
     daily_items = set([x["item_id"] for x in interaction_daily.select("item_id").distinct().collect()])
     new_items = list(daily_items.difference(weekly_items))
     if len(new_items) > 0:
-        etl.new_item_feature_preprocessing(spark, new_items, HDFS_DIR + "parquet-hourly/new_item_features")
+        etl.new_item_feature_preprocessing(spark, new_items, HDFS_DIR + "parquet-hourly/new-item-features")
         return True
     else:
         return False

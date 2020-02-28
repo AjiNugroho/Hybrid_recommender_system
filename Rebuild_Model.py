@@ -70,8 +70,8 @@ class Rebuild_Model(object):
         df_item = self.spark.read.csv(self.parquet_dir + "items", header=True)
         df_user = self.spark.read.csv(self.parquet_dir + "users", header=True)
         df_interaction = self.spark.read.csv(self.parquet_dir + "interactions", header=True)
-        df_user_feature= self.spark.read.csv(self.parquet_dir + 'user_features', header=True)
-        df_item_feature= self.spark.read.csv(self.parquet_dir + 'item_features', header=True)
+        df_user_feature= self.spark.read.csv(self.parquet_dir + 'user-features', header=True)
+        df_item_feature= self.spark.read.csv(self.parquet_dir + 'item-features', header=True)
 
         #cleansing data
         df_user = df_user.fillna({'category_subscribe':'No_Categories','subscribe':'No_Subscribe'})
@@ -180,7 +180,7 @@ class Rebuild_Model(object):
             f.close()
             
     def save_new_matrix(self, path_save='new_matrix_item'):
-        feature_item_new = self.spark.read.csv(self.parquet_dir + "new_item_features", header=True)
+        feature_item_new = self.spark.read.csv(self.parquet_dir + "new-item-features", header=True)
         new_item_list = np.array(np.unique(feature_item_new.select("item_id").collect()))
         itm_to_idx,idx_to_itm = self.mapping_index(new_item_list)
 
