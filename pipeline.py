@@ -64,7 +64,7 @@ def pipeline(task, subtask):
         elif subtask == "item_features":
             etl.item_feature_preprocessing(spark, save_path=HDFS_DIR + "parquet/item-features")
             # set new item features as empty
-            etl.item_feature_preprocessing(spark, new_items=new_items,
+            etl.item_feature_preprocessing(spark, new_items=[],
                                            save_path=HDFS_DIR + "parquet/new-item-features")
         elif subtask == "user_item_existing":
             etl.get_existing_users(spark, parquet_dir=HDFS_DIR)
