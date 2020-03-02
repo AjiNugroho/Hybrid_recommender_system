@@ -76,14 +76,14 @@ def pipeline(task, subtask):
                           online=True, new_item_exist=True)
             auc = model.get_model_perfomance()
             with open(LOCAL_DILL + "auc.txt", "w") as f:
-                f.write(auc)
+                f.write("AUC SCORE : " + str(auc))
                 f.close()
         else:
             model = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet/", local_dill_path=LOCAL_DILL,
                           online=True)
             auc = model.get_model_perfomance()
             with open(LOCAL_DILL + "auc.txt", "w") as f:
-                f.write(auc)
+                f.write("AUC SCORE : " + str(auc))
                 f.close()
 
     if task == "rebuild-model":
@@ -91,7 +91,7 @@ def pipeline(task, subtask):
                       online=False)
         auc = model.get_model_perfomance()
         with open(LOCAL_DILL + "auc.txt", "w") as f:
-            f.write(auc)
+            f.write("AUC SCORE : " + str(auc))
             f.close()
 
 
