@@ -15,6 +15,9 @@ def get_new_item():
     interactions_items = set([x["item_id"] for x in interactions.select("item_id").distinct().collect()])
     existing_items = set([x["item_id"] for x in item_existing.select("item_id").collect()])
     new_items = list(interactions_items.difference(existing_items))
+    with open(LOCAL_DILL + "new_item_id.txt") as f:
+        f.write("\n".join(new_items))
+        f.close()
     return new_items
 
 
