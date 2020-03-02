@@ -1,6 +1,7 @@
 from Rebuild_Model import Rebuild_Model
 import etl
 import argparse
+from datetime import datetime
 
 SPARK_MASTER = "spark://159.69.109.173:7077"
 HDFS_DIR = "hdfs://159.69.109.173:9000/user/sbgs-workspace1/recsys/"
@@ -74,24 +75,27 @@ def pipeline(task, subtask):
         if check_new_item():
             model = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet/", local_dill_path=LOCAL_DILL,
                           online=True, new_item_exist=True)
+            date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             auc = model.get_model_perfomance()
             with open(LOCAL_DILL + "auc.txt", "w") as f:
-                f.write("AUC SCORE : " + str(auc))
+                f.write("[{}] AUC SCORE : {}".format(date, str(auc)))
                 f.close()
         else:
             model = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet/", local_dill_path=LOCAL_DILL,
                           online=True)
+            date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             auc = model.get_model_perfomance()
             with open(LOCAL_DILL + "auc.txt", "w") as f:
-                f.write("AUC SCORE : " + str(auc))
+                f.write("[{}] AUC SCORE : {}".format(date, str(auc)))
                 f.close()
 
     if task == "rebuild-model":
         model = Rebuild_Model(spark_session=spark, parquet_dir=HDFS_DIR + "parquet/", local_dill_path=LOCAL_DILL,
                       online=False)
+        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         auc = model.get_model_perfomance()
         with open(LOCAL_DILL + "auc.txt", "w") as f:
-            f.write("AUC SCORE : " + str(auc))
+            f.write("[{}] AUC SCORE : {}".format(date, str(auc)))
             f.close()
 
 
