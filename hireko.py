@@ -94,9 +94,10 @@ class Hireko(object):
 
         #mencari item yang belum dilihat
         userindex = self.user_to_index[user]
-        list_item_unwatched = np.delete(self.list_item,self.matrix_interactions.tocsr()[userindex].indices)
+        #list_item_unwatched = np.delete(self.list_item,self.matrix_interactions.tocsr()[userindex].indices)
+        #mau ke semua item, pengecekan di level API
 
-        itemindex = [self.item_to_index[x] for x in list_item_unwatched]
+        itemindex = [self.item_to_index[x] for x in self.list_item]
 
         scores = self.model.predict(
                 userindex,
@@ -104,7 +105,7 @@ class Hireko(object):
                 item_features=self.matrix_item_feature,
                 user_features=self.matrix_user_feature)
 
-        top_item = list_item_unwatched[[np.argsort(-scores)]][:num]
+        top_item = self.list_item[[np.argsort(-scores)]][:num]
         top_score= scores[np.argsort(-scores)][:num]
         
         top_item_score = []
