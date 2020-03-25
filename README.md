@@ -1,4 +1,4 @@
-# hybrid_recommender_arena
+# hybrid_recommender
 
 ## How to use:
 
